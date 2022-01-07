@@ -1,13 +1,15 @@
 import { getCsrfToken, signIn } from 'next-auth/react';
 
-export default function SignIn({ csrfToken }) {
+export default function Login({ csrfToken }) {
   return (
     <form
       method='post'
       action='/api/auth/callback/credentials'
       onSubmit={(e) => {
         e.preventDefault();
-        // this manages the
+        // From https://next-auth.js.org/configuration/pages#credentials-sign-in :
+        // "You can also use the signIn() function which will handle obtaining the CSRF token for you"
+        // Yes, but this works only with clients that have not disabled JS in their browsers
         signIn('credentials', {
           username: e.target.elements.username.value,
           password: e.target.elements.password.value,
