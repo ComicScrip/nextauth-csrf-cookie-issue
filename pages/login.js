@@ -1,21 +1,8 @@
-import { getCsrfToken, signIn } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 
 export default function Login({ csrfToken }) {
   return (
-    <form
-      method='post'
-      action='/api/auth/callback/credentials'
-      onSubmit={(e) => {
-        e.preventDefault();
-        // From https://next-auth.js.org/configuration/pages#credentials-sign-in :
-        // "You can also use the signIn() function which will handle obtaining the CSRF token for you"
-        // Yes, but this works only with clients that have not disabled JS in their browsers
-        signIn('credentials', {
-          username: e.target.elements.username.value,
-          password: e.target.elements.password.value,
-        });
-      }}
-    >
+    <form method='post' action='/api/auth/callback/credentials'>
       <input name='csrfToken' type='hidden' defaultValue={csrfToken} />
       <label>
         Username
@@ -30,11 +17,31 @@ export default function Login({ csrfToken }) {
   );
 }
 
+const getCsrfTokenAndSetCookies = async (context) => {
+  // capturing the callback url if any, which should include the current domain for security ?
+  const host =
+    typeof context.query?.callbackUrl === 'string' &&
+    context.query?.callbackUrl.startsWith(process.env.NEXTAUTH_URL)
+      ? context.query?.callbackUrl
+      : process.env.NEXTAUTH_URL;
+  const redirectURL = encodeURIComponent(host);
+  // getting both the csrf form token and (next-auth.csrf-token cookie + next-auth.callback-url cookie)
+  const res = await fetch(
+    `${process.env.NEXTAUTH_URL}/api/auth/csrf?callbackUrl=${redirectURL}`
+  );
+  const { csrfToken } = await res.json();
+  const headers = await res.headers;
+  // placing the cookies on the response
+  const [csrfCookie, redirectCookie] = headers.get('set-cookie').split(',');
+  context.res.setHeader('set-cookie', [csrfCookie, redirectCookie]);
+  return csrfToken;
+};
+
 // This is the recommended way for Next.js 9.3 or newer
 export async function getServerSideProps(context) {
   return {
     props: {
-      csrfToken: await getCsrfToken(context),
+      csrfToken: await getCsrfTokenAndSetCookies(context),
     },
   };
 }
