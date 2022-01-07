@@ -1,5 +1,3 @@
-import { signIn } from 'next-auth/react';
-
 export default function Login({ csrfToken }) {
   return (
     <form method='post' action='/api/auth/callback/credentials'>
@@ -30,7 +28,7 @@ const getCsrfTokenAndSetCookies = async (context) => {
     `${process.env.NEXTAUTH_URL}/api/auth/csrf?callbackUrl=${redirectURL}`
   );
   const { csrfToken } = await res.json();
-  const headers = await res.headers;
+  const headers = res.headers;
   // placing the cookies on the response
   const [csrfCookie, redirectCookie] = headers.get('set-cookie').split(',');
   context.res.setHeader('set-cookie', [csrfCookie, redirectCookie]);
